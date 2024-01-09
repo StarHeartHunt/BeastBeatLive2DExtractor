@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace UnityLive2DExtractor
+namespace BeastBeatLive2DExtractor
 {
     public class CubismMotion3Json
     {

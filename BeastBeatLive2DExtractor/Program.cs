@@ -1,13 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing.Imaging;
-using System.IO;
-using System.Linq;
-using AssetStudio;
+﻿using AssetStudio;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 
-namespace UnityLive2DExtractor
+namespace BeastBeatLive2DExtractor
 {
     class Program
     {
@@ -22,63 +21,145 @@ namespace UnityLive2DExtractor
             assetsManager.LoadFolder(args[0]);
             if (assetsManager.assetsFileList.Count == 0)
                 return;
+
             var containers = new Dictionary<AssetStudio.Object, string>();
-            var cubismMocs = new List<MonoBehaviour>();
+            var treeNodeCollection = new List<TreeNode>();
+            var treeNodeDictionary = new Dictionary<GameObject, GameObjectTreeNode>();
+            foreach (var assetsFile in assetsManager.assetsFileList)
+            {
+                var fileNode = new TreeNode(assetsFile.fileName); //RootNode
+                foreach (var obj in assetsFile.Objects)
+                {
+                    if (obj is GameObject m_GameObject)
+                    {
+                        if (!treeNodeDictionary.TryGetValue(m_GameObject, out var currentNode))
+                        {
+                            currentNode = new GameObjectTreeNode(m_GameObject);
+                            treeNodeDictionary.Add(m_GameObject, currentNode);
+                        }
+
+                        var parentNode = fileNode;
+                        if (m_GameObject.m_Transform != null)
+                        {
+                            if (m_GameObject.m_Transform.m_Father.TryGet(out var m_Father))
+                            {
+                                if (m_Father.m_GameObject.TryGet(out var parentGameObject))
+                                {
+                                    if (!treeNodeDictionary.TryGetValue(parentGameObject, out var parentGameObjectNode))
+                                    {
+                                        parentGameObjectNode = new GameObjectTreeNode(parentGameObject);
+                                        treeNodeDictionary.Add(parentGameObject, parentGameObjectNode);
+                                    }
+                                    parentNode = parentGameObjectNode;
+                                }
+                            }
+                        }
+                        parentNode.Nodes.Add(currentNode);
+                    }
+                    else if (obj is AssetBundle m_AssetBundle)
+                    {
+                        foreach (var m_Container in m_AssetBundle.m_Container)
+                        {
+                            var preloadIndex = m_Container.Value.preloadIndex;
+                            var preloadSize = m_Container.Value.preloadSize;
+                            var preloadEnd = preloadIndex + preloadSize;
+                            for (int k = preloadIndex; k < preloadEnd; k++)
+                            {
+                                var pptr = m_AssetBundle.m_PreloadTable[k];
+                                if (pptr.TryGet(out var preloadTable))
+                                {
+                                    containers[preloadTable] = m_Container.Key;
+                                }
+                            }
+                        }
+                    }
+                    else if (obj is ResourceManager m_ResourceManager)
+                    {
+                        foreach (var m_Container in m_ResourceManager.m_Container)
+                        {
+                            if (m_Container.Value.TryGet(out var container))
+                            {
+                                containers[container] = m_Container.Key;
+                            }
+                        }
+                    }
+                }
+
+                if (fileNode.Nodes.Count > 0)
+                {
+                    treeNodeCollection.Add(fileNode);
+                }
+            }
+            var cubismMocs = new Dictionary<GameObject, List<AssetStudio.Object>>();
+            var animationClips = new List<AnimationClip>();
             foreach (var assetsFile in assetsManager.assetsFileList)
             {
                 foreach (var asset in assetsFile.Objects)
                 {
-                    switch (asset)
+                    if (asset is GameObject m_GameObject)
                     {
-                        case MonoBehaviour m_MonoBehaviour:
-                            if (m_MonoBehaviour.m_Script.TryGet(out var m_Script))
+                        foreach (var m_Component in m_GameObject.m_Components)
+                        {
+                            if (m_Component.TryGet(out var component) && component is MonoBehaviour monoBehaviour)
                             {
-                                if (m_Script.m_ClassName == "CubismMoc")
+                                if (!monoBehaviour.m_Script.TryGet(out var monoScript) || monoScript.m_ClassName != "CubismModel") continue;
+                                var reader = component.reader;
+                                reader.Reset();
+                                reader.Position += 28; //PPtr<GameObject> m_GameObject, m_Enabled, PPtr<MonoScript>
+                                reader.ReadAlignedString(); // m_Name
+
+                                var pptr = new PPtr<MonoBehaviour>(reader);
+                                if (pptr.TryGet(out var m_MonoBehaviour) &&
+                                    (!m_MonoBehaviour.m_Script.TryGet(out var script) || script.m_ClassName != "CubismMoc")) continue;
+                                if (m_GameObject.m_Transform != null)
                                 {
-                                    cubismMocs.Add(m_MonoBehaviour);
-                                }
-                            }
-                            break;
-                        case AssetBundle m_AssetBundle:
-                            foreach (var m_Container in m_AssetBundle.m_Container)
-                            {
-                                var preloadIndex = m_Container.Value.preloadIndex;
-                                var preloadSize = m_Container.Value.preloadSize;
-                                var preloadEnd = preloadIndex + preloadSize;
-                                for (int k = preloadIndex; k < preloadEnd; k++)
-                                {
-                                    var pptr = m_AssetBundle.m_PreloadTable[k];
-                                    if (pptr.TryGet(out var obj))
+                                    if (m_GameObject.m_Transform.m_Father.TryGet(out var m_Father))
                                     {
-                                        containers[obj] = m_Container.Key;
+                                        if (m_Father.m_GameObject.TryGet(out var parentGameObject))
+                                        {
+                                            var resolvedComponents = ResolveComponents(m_GameObject);
+                                            resolvedComponents.Add(m_MonoBehaviour);
+
+                                            var drawables = treeNodeCollection.Find(node => node.Text == "resources.assets")
+                                                .Nodes.Find(node => ((GameObjectTreeNode)node).gameObject == parentGameObject)
+                                                .Nodes.Find(node => ((GameObjectTreeNode)node).gameObject == m_GameObject)
+                                                .Nodes.Find(node => node.Text == "Drawables").Nodes;
+                                            var gameObject = ((GameObjectTreeNode)drawables[0]).gameObject;
+                                            if (gameObject.m_Components.Last().TryGet(out var renderer) && renderer is MonoBehaviour m_Renderer)
+                                            {
+                                                if (!m_Renderer.m_Script.TryGet(out var rendererScript) || rendererScript.m_ClassName != "CubismRenderer") continue;
+                                                var reader2 = m_Renderer.reader;
+                                                reader2.Reset();
+                                                reader2.Position += 28; //PPtr<GameObject> m_GameObject, m_Enabled, PPtr<MonoScript>
+                                                reader2.ReadAlignedString(); // m_Name
+                                                reader2.ReadInt32(); // _localSortingOrder
+                                                reader2.ReadColor4(); // _color
+
+                                                var pptr2 = new PPtr<Texture2D>(reader2);
+                                                if (pptr2.TryGet(out var mainTex))
+                                                {
+                                                    resolvedComponents.Add(mainTex);
+                                                }
+                                            }
+
+                                            cubismMocs.Add(parentGameObject, resolvedComponents);
+                                        }
                                     }
                                 }
                             }
-                            break;
-                        case ResourceManager m_ResourceManager:
-                            foreach (var m_Container in m_ResourceManager.m_Container)
-                            {
-                                if (m_Container.Value.TryGet(out var obj))
-                                {
-                                    containers[obj] = m_Container.Key;
-                                }
-                            }
-                            break;
+                        }
+                    }
+                    else if (asset is AnimationClip animationClip)
+                    {
+                        animationClips.Add(animationClip);
                     }
                 }
             }
-            var basePathList = new List<string>();
-            foreach (var cubismMoc in cubismMocs)
-            {
-                var container = containers[cubismMoc];
-                var basePath = container.Substring(0, container.LastIndexOf("/"));
-                basePathList.Add(basePath);
-            }
-            var lookup = containers.ToLookup(x => basePathList.Find(b => x.Value.Contains(b)), x => x.Key);
+            treeNodeDictionary.Clear();
             var baseDestPath = Path.Combine(Path.GetDirectoryName(args[0]), "Live2DOutput");
-            foreach (var assets in lookup)
+            foreach (var assets in cubismMocs)
             {
-                var key = assets.Key;
+                var key = containers[assets.Key];
                 if (key == null)
                     continue;
                 var name = key.Substring(key.LastIndexOf("/") + 1);
@@ -93,10 +174,7 @@ namespace UnityLive2DExtractor
 
                 var monoBehaviours = new List<MonoBehaviour>();
                 var texture2Ds = new List<Texture2D>();
-                var gameObjects = new List<GameObject>();
-                var animationClips = new List<AnimationClip>();
-
-                foreach (var asset in assets)
+                foreach (var asset in assets.Value)
                 {
                     if (asset is MonoBehaviour m_MonoBehaviour)
                     {
@@ -106,16 +184,7 @@ namespace UnityLive2DExtractor
                     {
                         texture2Ds.Add(m_Texture2D);
                     }
-                    else if (asset is GameObject m_GameObject)
-                    {
-                        gameObjects.Add(m_GameObject);
-                    }
-                    else if (asset is AnimationClip m_AnimationClip)
-                    {
-                        animationClips.Add(m_AnimationClip);
-                    }
                 }
-
                 //physics
                 var physics = monoBehaviours.FirstOrDefault(x =>
                 {
@@ -146,12 +215,12 @@ namespace UnityLive2DExtractor
                     using (var bitmap = new Texture2DConverter(texture2D).ConvertToBitmap(true))
                     {
                         textures.Add($"textures/{texture2D.m_Name}.png");
-                        bitmap.Save($"{destTexturePath}{texture2D.m_Name}.png", ImageFormat.Png);
+                        bitmap.Save($"{destTexturePath}{texture2D.m_Name}.png", System.Drawing.Imaging.ImageFormat.Png);
                     }
                 }
                 //motion
                 var motions = new List<string>();
-                var rootTransform = gameObjects[0].m_Transform;
+                var rootTransform = assets.Key.m_Transform;
                 while (rootTransform.m_Father.TryGet(out var m_Father))
                 {
                     rootTransform = m_Father;
@@ -321,6 +390,15 @@ namespace UnityLive2DExtractor
             }
             Console.WriteLine("Done!");
             Console.Read();
+        }
+
+        private static List<AssetStudio.Object> ResolveComponents(GameObject gameObject)
+        {
+            return gameObject.m_Components
+                .Select(pptr => (ok: pptr.TryGet(out var component), component))
+                .Where(t => t.ok)
+                .Select(t => (AssetStudio.Object)t.component)
+                .ToList();
         }
 
         private static string ParsePhysics(MonoBehaviour physics)

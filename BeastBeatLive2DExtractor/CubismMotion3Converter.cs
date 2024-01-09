@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using AssetStudio;
 
-namespace UnityLive2DExtractor
+namespace BeastBeatLive2DExtractor
 {
     class CubismMotion3Converter
     {

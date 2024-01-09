@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{7D22D721-C1B4-424A-A2B9-8978FB1E53A3}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>UnityLive2DExtractor</RootNamespace>
-    <AssemblyName>UnityLive2DExtractor</AssemblyName>
+    <RootNamespace>BeastBeatLive2DExtractor</RootNamespace>
+    <AssemblyName>BeastBeatLive2DExtractor</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -61,6 +61,7 @@
     <Compile Include="CubismMotion3Json.cs" />
     <Compile Include="CubismPhysics3Json.cs" />
     <Compile Include="CubismPhysicsRig.cs" />
+    <Compile Include="GameObjectTreeNode.cs" />
     <Compile Include="ImportedKeyframedAnimation.cs" />
     <Compile Include="MyJsonConverter.cs" />
     <Compile Include="MyJsonConverter2.cs" />
@@ -73,11 +74,11 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-	<ContentWithTargetPath Include="Libraries\x64\Texture2DDecoderNative.dll">
+    <ContentWithTargetPath Include="Libraries\x64\Texture2DDecoderNative.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>x64\Texture2DDecoderNative.dll</TargetPath>
     </ContentWithTargetPath>
-	<ContentWithTargetPath Include="Libraries\x86\Texture2DDecoderNative.dll">
+    <ContentWithTargetPath Include="Libraries\x86\Texture2DDecoderNative.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>x86\Texture2DDecoderNative.dll</TargetPath>
     </ContentWithTargetPath>

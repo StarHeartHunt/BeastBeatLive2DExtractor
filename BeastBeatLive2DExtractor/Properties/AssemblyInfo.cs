@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // 有关程序集的一般信息由以下
 // 控制。更改这些特性值可修改
 // 与程序集关联的信息。
-[assembly: AssemblyTitle("UnityLive2DExtractor")]
+[assembly: AssemblyTitle("BeastBeatLive2DExtractor")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("UnityLive2DExtractor")]
+[assembly: AssemblyProduct("BeastBeatLive2DExtractor")]
 [assembly: AssemblyCopyright("Copyright © Perfare 2019-2020")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

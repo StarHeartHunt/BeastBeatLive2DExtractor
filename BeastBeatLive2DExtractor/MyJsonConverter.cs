@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace UnityLive2DExtractor
+namespace BeastBeatLive2DExtractor
 {
     public class MyJsonConverter : JsonConverter
     {

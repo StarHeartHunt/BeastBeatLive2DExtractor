@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 
-namespace UnityLive2DExtractor
+namespace BeastBeatLive2DExtractor
 {
     public class CubismModel3Json
     {

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace UnityLive2DExtractor
+namespace BeastBeatLive2DExtractor
 {
     public class CubismPhysics3Json
     {

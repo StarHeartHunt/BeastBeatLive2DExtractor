@@ -1,7 +1,7 @@
 ﻿using System;
 using Newtonsoft.Json;
 
-namespace UnityLive2DExtractor
+namespace BeastBeatLive2DExtractor
 {
     public class MyJsonConverter2 : JsonConverter
     {

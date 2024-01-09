@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using AssetStudio;
 
-namespace UnityLive2DExtractor
+namespace BeastBeatLive2DExtractor
 {
     public class CubismPhysicsNormalizationTuplet
     {
